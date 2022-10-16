@@ -4,7 +4,9 @@ import os
 import tensorflow as tf
 import functools
 
-#Question 3
+# Question 3
+
+
 def reduce_dimension_ndc(df, ndc_df):
     '''
     df: pandas dataframe, input dataset
@@ -13,13 +15,16 @@ def reduce_dimension_ndc(df, ndc_df):
         df: pandas dataframe, output dataframe with joined generic drug name
     '''
     df_reduced = df.copy()
-    df_reduced = pd.merge(df, ndc_df[['Proprietary Name', 'NDC_Code']], how='left', left_on='ndc_code', right_on='NDC_Code')
+    df_reduced = pd.merge(df, ndc_df[['Proprietary Name', 'NDC_Code']],
+                          how='left', left_on='ndc_code', right_on='NDC_Code')
     df_reduced['generic_drug_name'] = df_reduced['Proprietary Name']
     df_reduced = df_reduced.drop(['NDC_Code', 'Proprietary Name'], axis=1)
-    
+
     return df_reduced
 
-#Question 4
+# Question 4
+
+
 def select_first_encounter(df):
     '''
     df: pandas dataframe, dataframe with all encounters
@@ -27,12 +32,15 @@ def select_first_encounter(df):
         - first_encounter_df: pandas dataframe, dataframe with only the first encounter for a given patient
     '''
     df.sort_values('encounter_id')
-    first_encounter_value = df.groupby('patient_nbr')['encounter_id'].head(1).values
+    first_encounter_value = df.groupby(
+        'patient_nbr')['encounter_id'].head(1).values
     first_encounter_df = df[df['encounter_id'].isin(first_encounter_value)]
-    
+
     return first_encounter_df
 
-#Question 6
+# Question 6
+
+
 def patient_dataset_splitter(df, patient_key='patient_nbr'):
     '''
     df: pandas dataframe, input dataset that will be split
@@ -43,14 +51,25 @@ def patient_dataset_splitter(df, patient_key='patient_nbr'):
      - validation: pandas dataframe,
      - test: pandas dataframe,
     '''
-    train, validation, test = np.split(df.sample(frac=1).reset_index(drop=True), [int(0.6*len(df)), int(0.8*len(df))])
-    
+    train_perc, val_perc, test_perc = 0.6, 0.2, 0.2
+    df = df.iloc[np.random.permutation(len(df))]
+    unique_values = df[patient_key].unique()
+    total_values = len(unique_values)
+    train_size = int(train_perc * total_values)
+    val_size = int(val_perc * total_values)
+    test_size = int(test_perc * total_values)
+    train = df[df[patient_key].isin(unique_values[:train_size])]
+    validation = df[df[patient_key].isin(
+        unique_values[train_size: train_size+val_size])]
+    test = df[df[patient_key].isin(unique_values[train_size+val_size:])]
+
     return train, validation, test
 
-#Question 7
+# Question 7
+
 
 def create_tf_categorical_feature_cols(categorical_col_list,
-                              vocab_dir='./diabetes_vocab/'):
+                                       vocab_dir='./diabetes_vocab/'):
     '''
     categorical_col_list: list, categorical field list that will be transformed with TF feature column
     vocab_dir: string, the path where the vocabulary text files are located
@@ -67,23 +86,25 @@ def create_tf_categorical_feature_cols(categorical_col_list,
 
         '''
         tf_categorical_feature_column = tf.feature_column.categorical_column_with_vocabulary_file(
-                                            key=c,
-                                            vocabulary_file = vocab_file_path,
-                                            num_oov_buckets=1)
-        
-        tf_categorical_feature_column = tf.feature_column.indicator_column(tf_categorical_feature_column)
-        
+            key=c,
+            vocabulary_file=vocab_file_path,
+            num_oov_buckets=1)
+
+        tf_categorical_feature_column = tf.feature_column.indicator_column(
+            tf_categorical_feature_column)
+
         output_tf_list.append(tf_categorical_feature_column)
-        
+
     return output_tf_list
 
-#Question 8
+# Question 8
+
+
 def normalize_numeric_with_zscore(col, mean, std):
     '''
     This function can be used in conjunction with the tf feature column for normalization
     '''
     return (col - mean)/std
-
 
 
 def create_tf_numeric_feature(col, MEAN, STD, default_value=0):
@@ -96,14 +117,17 @@ def create_tf_numeric_feature(col, MEAN, STD, default_value=0):
     return:
         tf_numeric_feature: tf feature column representation of the input field
     '''
-    normalizer = functools.partial(normalize_numeric_with_zscore, mean=MEAN, std=STD)
-    
+    normalizer = functools.partial(
+        normalize_numeric_with_zscore, mean=MEAN, std=STD)
+
     tf_numeric_feature = tf.feature_column.numeric_column(
         key=col, default_value=default_value, normalizer_fn=normalizer, dtype=tf.float64)
-    
+
     return tf_numeric_feature
 
-#Question 9
+# Question 9
+
+
 def get_mean_std_from_preds(diabetes_yhat):
     '''
     diabetes_yhat: TF Probability prediction object
@@ -113,6 +137,8 @@ def get_mean_std_from_preds(diabetes_yhat):
     return m, s
 
 # Question 10
+
+
 def get_student_binary_prediction(df, col):
     '''
     df: pandas dataframe prediction output dataframe
@@ -120,7 +146,7 @@ def get_student_binary_prediction(df, col):
     return:
         student_binary_prediction: pandas dataframe converting input to flattened numpy array and binary labels
     '''
-    student_binary_prediction = df[col].apply(lambda x: 1 if x >= 5 else 0).values
-    
-    return student_binary_prediction
+    student_binary_prediction = df[col].apply(
+        lambda x: 1 if x >= 5 else 0).values
 
+    return student_binary_prediction
